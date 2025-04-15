@@ -1,3 +1,4 @@
+```py
 import random
 import streamlit as st
 from queue import PriorityQueue
@@ -221,3 +222,4 @@ if st.button("Find Path"):
             plot_map(path)  # Display map with the path
         else:
             st.write(f"No path found between {start_market} and {goal_market}.")
+```
