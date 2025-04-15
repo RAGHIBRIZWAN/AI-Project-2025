@@ -221,10 +221,3 @@ if st.button("Find Path"):
             plot_map(path)  # Display map with the path
         else:
             st.write(f"No path found between {start_market} and {goal_market}.")
-            
-            st.markdown("""
-    <hr style="margin-top:3rem;">
-    <div style="text-align: center; color: #777;">
-        Built with ❤️ using <a href="https://streamlit.io" target="_blank" style="color:#3498db;">Streamlit</a>
-    </div>
-""", unsafe_allow_html=True)
