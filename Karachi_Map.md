@@ -4,7 +4,6 @@ import streamlit as st
 from queue import PriorityQueue
 import matplotlib.pyplot as plt
 import math
-from collections import defaultdict
 
 st.set_page_config(page_title="Karachi Market Path Finder", layout="centered")
 
