@@ -114,10 +114,9 @@ graph = {
     'Light House': [('Zainab Market', 90), ('Tariq Road', 70), ('Bahadurabad Market', 80), ('Hyderi Market', 70), ('Rabi Center', 80), ('Gul Plaza', 70), ('Tibbat Centre', 60), ('KDA Market', 90), ('Empress Market', 70), ('Bolton Market', 70), ('Jodia Bazaar', 70), ('Urdu Bazaar', 60)],
 }
 
-# Heuristic function: Manhattan distance plus a random "traffic" cost
 def heuristic(node, goal):
     if node not in market_coords or goal not in market_coords:
-        return float('inf')  # Invalid node or goal
+        return float('inf') 
 
     node_coords = market_coords[node]
     goal_coords = market_coords[goal]
@@ -128,7 +127,6 @@ def heuristic(node, goal):
 
     return dx + dy + traffic_cost
 
-# A* Algorithm
 def a_star(start, goal):
     open_set = PriorityQueue()
     open_set.put((0, start))
