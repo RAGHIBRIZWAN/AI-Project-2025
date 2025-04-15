@@ -80,7 +80,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Market coordinates
 market_coords = {
     'Zainab Market': [24.8473, 67.0305],
     'Tariq Road': [24.8585, 67.0292],
@@ -97,7 +96,6 @@ market_coords = {
     'Light House': [24.8605, 67.0112]
 }
 
-# Graph representation
 graph = {
     'Zainab Market': [('Tariq Road', 50), ('Bahadurabad Market', 60), ('Hyderi Market', 20), ('Rabi Center', 140), ('Gul Plaza', 25), ('Tibbat Centre', 70), ('KDA Market', 160), ('Empress Market', 60), ('Bolton Market', 80), ('Jodia Bazaar', 90), ('Urdu Bazaar', 60), ('Light House', 90)],
     'Tariq Road': [('Zainab Market', 50), ('Bahadurabad Market', 40), ('Hyderi Market', 30), ('Rabi Center', 100), ('Gul Plaza', 20), ('Tibbat Centre', 60), ('KDA Market', 150), ('Empress Market', 70), ('Bolton Market', 90), ('Jodia Bazaar', 80), ('Urdu Bazaar', 50), ('Light House', 70)],
