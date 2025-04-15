@@ -1,4 +1,4 @@
-```asm
+```py
 import random
 import streamlit as st
 from queue import PriorityQueue
