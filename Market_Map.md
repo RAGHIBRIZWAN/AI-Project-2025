@@ -271,6 +271,17 @@ with col1:
     start_market = st.selectbox("Select starting market", list(market_coords.keys()))
 with col2:
     goal_market = st.selectbox("Select destination market", list(market_coords.keys()))
+    
+if st.button("Find Optimal Path", use_container_width=True):
+    if start_market == goal_market:
+        st.warning("Please select different start and destination markets")
+    else:
+        with st.spinner("Finding best path..."):
+            path = a_star(start_market, goal_market)
+            if path:
+                st.session_state["path"] = path
+            else:
+                st.error("No path found between the selected markets")
 
 if "path" in st.session_state:
     path = st.session_state["path"]
@@ -287,17 +298,6 @@ if "path" in st.session_state:
 
     st.subheader("Route Map")
     st_folium(plot_folium_map(path), width=700, height=500)
-
-if st.button("Find Optimal Path", use_container_width=True):
-    if start_market == goal_market:
-        st.warning("Please select different start and destination markets")
-    else:
-        with st.spinner("Finding best path..."):
-            path = a_star(start_market, goal_market)
-            if path:
-                st.session_state["path"] = path
-            else:
-                st.error("No path found between the selected markets")
 
 if 'path' not in locals():
     st.subheader("Karachi Markets Map")
