@@ -2,9 +2,9 @@ import streamlit as st
 from queue import PriorityQueue
 import folium # for maps
 from streamlit_folium import st_folium
-import osmnx as ox # for routing 
+import osmnx as ox # for routing
 import networkx as nx
-import os
+import os #for storing the routed map 
 import random
 import math
 
@@ -90,7 +90,7 @@ def heuristic(node, goal):
     node_lat, node_lon = market_coords[node]
     goal_lat, goal_lon = market_coords[goal]
 
-    lat_diff = abs(goal_lat - node_lat) * 111.32  
+    lat_diff = abs(goal_lat - node_lat) * 111.32
     lon_diff = abs(goal_lon - node_lon) * 111.32 * abs(math.cos(math.radians((node_lat + goal_lat) / 2)))
 
     traffic_factor = random.uniform(1.0, 1.3)
@@ -137,7 +137,7 @@ def load_karachi_graph():
 
     if os.path.exists(graph_path):
         G = ox.load_graphml(graph_path)
-    else: # download the paths and routs of not downloaded 
+    else: # download the paths and routs of not downloaded
         with st.spinner("Downloading Karachi map (only once)..."):
             G = ox.graph_from_place('Karachi, Pakistan', network_type='drive')
             ox.save_graphml(G, graph_path)
@@ -163,7 +163,7 @@ def plot_folium_map(path=None):
     lons = [coords[1] for coords in market_coords.values()]
     center_lat = sum(lats) / len(lats)
     center_lon = sum(lons) / len(lons)
-    
+
     m = folium.Map(
         location=[center_lat, center_lon],
         zoom_start=13,
@@ -174,7 +174,7 @@ def plot_folium_map(path=None):
     )
 
     for market, coords in market_coords.items():
-        folium.Marker(
+        folium.Marker( # all mentioned markets 
             location=coords,
             popup=market,
             icon=folium.Icon(color='red', icon='shopping-cart', prefix='fa')
@@ -196,7 +196,7 @@ def plot_folium_map(path=None):
             else:
                 all_route_coords.extend([start_coords, end_coords])
 
-        folium.PolyLine(
+        folium.PolyLine( # line representing optimal path between starting and destination points
             all_route_coords,
             color='#3498db',
             weight=6,
@@ -205,20 +205,20 @@ def plot_folium_map(path=None):
             line_cap='round'
         ).add_to(m)
 
-        folium.Marker(
+        folium.Marker( #starting point 
             location=market_coords[path[0]],
             icon=folium.Icon(color='green', icon='play', prefix='fa'),
             tooltip=f"Start: {path[0]}"
         ).add_to(m)
 
-        folium.Marker(
+        folium.Marker( # destination point 
             location=market_coords[path[-1]],
             icon=folium.Icon(color='black', icon='flag-checkered', prefix='fa'),
             tooltip=f"Destination: {path[-1]}"
         ).add_to(m)
 
         for i, market in enumerate(path[1:-1], 1):
-            folium.Marker(
+            folium.Marker( # any other market arriving in between the optimal path  
                 location=market_coords[market],
                 icon=folium.Icon(color='orange', icon='dot-circle', prefix='fa'),
                 tooltip=f"Waypoint {i}: {market}"
