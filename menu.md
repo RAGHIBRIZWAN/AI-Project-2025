@@ -56,7 +56,7 @@ css = """
 
 def main_menu():
     """Display the main menu interface"""
-    st.markdown("<h1 class='title'>🎮 Game Selection Menu</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 class='title'>🎇Make Your Choice🎇</h1>", unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     with col1:
@@ -67,7 +67,7 @@ def main_menu():
         </div>
         """, unsafe_allow_html=True)
         
-        if st.button("Play Escape Room", key="escape_room"):
+        if st.button("Escape Room", key="escape_room"):
             st.session_state['current_page'] = 'escape_room'
             st.rerun()
 
@@ -79,7 +79,7 @@ def main_menu():
         </div>
         """, unsafe_allow_html=True)
         
-        if st.button("Play Market Path Finder", key="market_finder"):
+        if st.button("Market Path Finder", key="market_finder"):
             st.session_state['current_page'] = 'market_finder'
             st.rerun()
 
@@ -90,9 +90,9 @@ if 'current_page' not in st.session_state:
 # Only set page config if we're on the main menu
 if st.session_state['current_page'] == 'main_menu':
     st.set_page_config(
-        page_title="Game Selection Menu",
+        page_title="User Choice Menu",
         layout="centered",
-        page_icon="🎮"
+        page_icon="❓"
     )
     st.markdown(css, unsafe_allow_html=True)
     main_menu()
