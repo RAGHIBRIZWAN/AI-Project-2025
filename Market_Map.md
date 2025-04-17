@@ -1,139 +1,123 @@
 ```py
-import random
 import streamlit as st
 from queue import PriorityQueue
-import matplotlib.pyplot as plt
+import folium # for maps
+from streamlit_folium import st_folium
+import osmnx as ox # for routing 
+import networkx as nx
+import os
+import random
+import math
 
 st.set_page_config(page_title="Karachi Market Path Finder", layout="centered")
 
 st.markdown("""
     <style>
-    body {
-        background-color: #f0f2f6;
-    }
-
     .stApp {
         background-color: #f0f2f6;
-        padding: 2rem;
         font-family: 'Segoe UI', sans-serif;
     }
-
     h1 {
         color: #2c3e50;
         text-align: center;
-        margin-bottom: 1rem;
+        margin-bottom: 1.5rem;
     }
-
     .stSelectbox > label {
         font-size: 1.1rem;
         font-weight: bold;
         color: #2c3e50;
-        margin-bottom: 0.5rem;
     }
-
-    .stSelectbox .css-1wa3eu0-placeholder {
-        color: #999;
-    }
-
-    .stButton {
-        display: flex;
-        justify-content: center;
-        margin-top: 1rem;
-    }
-
     .stButton>button {
-        width: 60%;
+        width: 100%;
         background-color: #3498db;
         color: white;
-        padding: 0.85rem 1.5rem;
-        border: none;
-        border-radius: 10px;
-        font-size: 1.2rem;
+        padding: 0.75rem;
+        border-radius: 8px;
         font-weight: bold;
-        transition: background-color 0.3s ease;
     }
     .stButton>button:hover {
         background-color: #2980b9;
     }
-
-    .stButton>button:hover {
-        background-color: #2980b9;
-    }
-
-    .block-container {
-        padding: 2rem 3rem;
-    }
-
     .result-container {
-        background-color: #ffffff;
-        padding: 1rem 1.5rem;
+        background-color: white;
+        padding: 1.5rem;
         border-radius: 10px;
-        box-shadow: 0 0 10px rgba(0,0,0,0.05);
-        margin-top: 1.5rem;
-        color: #2c3e50;
-        font-size: 1.05rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin: 1.5rem 0;
     }
-
     .path-highlight {
-        color: #3498db;
+        color: #e74c3c;
         font-weight: bold;
     }
     </style>
 """, unsafe_allow_html=True)
 
+# Market data with coordinates
 market_coords = {
-    'Zainab Market': [24.8473, 67.0305],
-    'Tariq Road': [24.8585, 67.0292],
-    'Bahadurabad Market': [24.8557, 67.0512],
-    'Hyderi Market': [24.9574, 67.0449],
-    'Rabi Center': [24.9073, 67.0649],
-    'Gul Plaza': [24.8493, 67.0255],
-    'Tibbat Centre': [24.8612, 67.0518],
-    'KDA Market': [24.9253, 67.0687],
-    'Empress Market': [24.8600, 67.0207],
-    'Bolton Market': [24.8603, 67.0138],
-    'Jodia Bazaar': [24.8622, 67.0103],
-    'Urdu Bazaar': [24.8610, 67.0294],
-    'Light House': [24.8605, 67.0112]
+    'Zainab Market': (24.8473, 67.0305),
+    'Tariq Road': (24.8585, 67.0292),
+    'Bahadurabad Market': (24.8557, 67.0512),
+    'Hyderi Market': (24.9574, 67.0449),
+    'Rabi Center': (24.9073, 67.0649),
+    'Gul Plaza': (24.8493, 67.0255),
+    'Tibbat Centre': (24.8612, 67.0518),
+    'KDA Market': (24.9253, 67.0687),
+    'Empress Market': (24.8600, 67.0207),
+    'Bolton Market': (24.8603, 67.0138),
+    'Jodia Bazaar': (24.8622, 67.0103),
+    'Urdu Bazaar': (24.8610, 67.0294),
+    'Light House': (24.8605, 67.0112)
 }
 
-graph = {
-    'Zainab Market': [('Tariq Road', 50), ('Bahadurabad Market', 60), ('Hyderi Market', 20), ('Rabi Center', 140), ('Gul Plaza', 25), ('Tibbat Centre', 70), ('KDA Market', 160), ('Empress Market', 60), ('Bolton Market', 80), ('Jodia Bazaar', 90), ('Urdu Bazaar', 60), ('Light House', 90)],
-    'Tariq Road': [('Zainab Market', 50), ('Bahadurabad Market', 40), ('Hyderi Market', 30), ('Rabi Center', 100), ('Gul Plaza', 20), ('Tibbat Centre', 60), ('KDA Market', 150), ('Empress Market', 70), ('Bolton Market', 90), ('Jodia Bazaar', 80), ('Urdu Bazaar', 50), ('Light House', 70)],
-    'Bahadurabad Market': [('Zainab Market', 60), ('Tariq Road', 40), ('Hyderi Market', 50), ('Rabi Center', 90), ('Gul Plaza', 30), ('Tibbat Centre', 50), ('KDA Market', 140), ('Empress Market', 80), ('Bolton Market', 70), ('Jodia Bazaar', 60), ('Urdu Bazaar', 40), ('Light House', 80)],
-    'Hyderi Market': [('Zainab Market', 20), ('Tariq Road', 30), ('Bahadurabad Market', 50), ('Rabi Center', 110), ('Gul Plaza', 40), ('Tibbat Centre', 60), ('KDA Market', 130), ('Empress Market', 90), ('Bolton Market', 100), ('Jodia Bazaar', 80), ('Urdu Bazaar', 50), ('Light House', 70)],
-    'Rabi Center': [('Zainab Market', 140), ('Tariq Road', 100), ('Bahadurabad Market', 90), ('Hyderi Market', 110), ('Gul Plaza', 60), ('Tibbat Centre', 50), ('KDA Market', 80), ('Empress Market', 70), ('Bolton Market', 90), ('Jodia Bazaar', 100), ('Urdu Bazaar', 60), ('Light House', 80)],
-    'Gul Plaza': [('Zainab Market', 25), ('Tariq Road', 20), ('Bahadurabad Market', 30), ('Hyderi Market', 40), ('Rabi Center', 60), ('Tibbat Centre', 50), ('KDA Market', 70), ('Empress Market', 80), ('Bolton Market', 90), ('Jodia Bazaar', 60), ('Urdu Bazaar', 50), ('Light House', 70)],
-    'Tibbat Centre': [('Zainab Market', 70 ), ('Tariq Road', 60), ('Bahadurabad Market', 50), ('Hyderi Market', 60), ('Rabi Center', 50), ('Gul Plaza', 50), ('KDA Market', 90), ('Empress Market', 80), ('Bolton Market', 70), ('Jodia Bazaar', 60), ('Urdu Bazaar', 50), ('Light House', 60)],
-    'KDA Market': [('Zainab Market', 160), ('Tariq Road', 150), ('Bahadurabad Market', 140), ('Hyderi Market', 130), ('Rabi Center', 80), ('Gul Plaza', 70), ('Tibbat Centre', 90), ('Empress Market', 100), ('Bolton Market', 110), ('Jodia Bazaar', 120), ('Urdu Bazaar', 80), ('Light House', 90)],
-    'Empress Market': [('Zainab Market', 60), ('Tariq Road', 70), ('Bahadurabad Market', 80), ('Hyderi Market', 90), ('Rabi Center', 70), ('Gul Plaza', 80), ('Tibbat Centre', 80), ('KDA Market', 100), ('Bolton Market', 90), ('Jodia Bazaar', 60), ('Urdu Bazaar', 50), ('Light House', 70)],
-    'Bolton Market': [('Zainab Market', 80), ('Tariq Road', 90), ('Bahadurabad Market', 70), ('Hyderi Market', 100), ('Rabi Center', 90), ('Gul Plaza', 90), ('Tibbat Centre', 70), ('KDA Market', 110), ('Empress Market', 90), ('Jodia Bazaar', 80), ('Urdu Bazaar', 60), ('Light House', 70)],
-    'Jodia Bazaar': [('Zainab Market', 90), ('Tariq Road', 80), ('Bahadurabad Market', 60), ('Hyderi Market', 80), ('Rabi Center', 100), ('Gul Plaza', 60), ('Tibbat Centre', 60), ('KDA Market', 120), ('Empress Market', 60), ('Bolton Market', 80), ('Urdu Bazaar', 50), ('Light House', 70)],
-    'Urdu Bazaar': [('Zainab Market', 60), ('Tariq Road', 50), ('Bahadurabad Market', 40), ('Hyderi Market', 50), ('Rabi Center', 60), ('Gul Plaza', 50), ('Tibbat Centre', 50), ('KDA Market', 80), ('Empress Market', 50), ('Bolton Market', 60), ('Jodia Bazaar', 50), ('Light House', 60)],
-    'Light House': [('Zainab Market', 90), ('Tariq Road', 70), ('Bahadurabad Market', 80), ('Hyderi Market', 70), ('Rabi Center', 80), ('Gul Plaza', 70), ('Tibbat Centre', 60), ('KDA Market', 90), ('Empress Market', 70), ('Bolton Market', 70), ('Jodia Bazaar', 70), ('Urdu Bazaar', 60)],
-}
+# Create graph representation for A* algorithm
+def haversine_distance(coord1, coord2):
+    # Haversine formula to calculate distance between two lat/lon coordinates in km
+    R = 6371  # Earth radius in km
+    lat1, lon1 = coord1
+    lat2, lon2 = coord2
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    d_phi = math.radians(lat2 - lat1)
+    d_lambda = math.radians(lon2 - lon1)
+    
+    a = math.sin(d_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    
+    distance_km = R * c
+    return distance_km * 1000  # return in meters
+
+def generate_fully_connected_graph(coords):
+    new_graph = {}
+    for market1 in coords:
+        new_graph[market1] = []
+        for market2 in coords:
+            if market1 != market2:
+                distance = haversine_distance(coords[market1], coords[market2])
+                cost = int(distance / 10)  # Scale down to simulate road travel cost
+                new_graph[market1].append((market2, cost))
+    return new_graph
+
+graph = generate_fully_connected_graph(market_coords)
 
 def heuristic(node, goal):
-    if node not in market_coords or goal not in market_coords:
-        return float('inf') 
+    node_lat, node_lon = market_coords[node]
+    goal_lat, goal_lon = market_coords[goal]
 
-    node_coords = market_coords[node]
-    goal_coords = market_coords[goal]
+    lat_diff = abs(goal_lat - node_lat) * 111.32  
+    lon_diff = abs(goal_lon - node_lon) * 111.32 * abs(math.cos(math.radians((node_lat + goal_lat) / 2)))
 
-    dx = abs(node_coords[0] - goal_coords[0])
-    dy = abs(node_coords[1] - goal_coords[1])
-    traffic_cost = random.randint(0, 100)
+    traffic_factor = random.uniform(1.0, 1.3)
 
-    return dx + dy + traffic_cost
+    return (lat_diff + lon_diff) * traffic_factor
+
 
 def a_star(start, goal):
     open_set = PriorityQueue()
     open_set.put((0, start))
     came_from = {}
     g_score = {market: float('inf') for market in market_coords}
-    f_score = {market: float('inf') for market in market_coords}
-
     g_score[start] = 0
+
+    f_score = {market: float('inf') for market in market_coords}
     f_score[start] = heuristic(start, goal)
 
     while not open_set.empty():
@@ -159,67 +143,163 @@ def a_star(start, goal):
 
     return None
 
-def plot_map(path=None):
-    fig, ax = plt.subplots(figsize=(20,20))
-    ax.set_facecolor('#ecf0f1') 
-    label_positions = {}
+def filter_graph(G):
+    """Filter out edges that violate constraints like access or unwanted road types"""
+    G_filtered = G.copy()
+    for u, v, k, data in G.edges(keys=True, data=True):
+        if 'access' in data and data['access'] in ['private', 'no']:
+            G_filtered.remove_edge(u, v, k)
+        elif 'highway' in data and data['highway'] in ['service', 'pedestrian', 'footway', 'steps', 'track']:
+            G_filtered.remove_edge(u, v, k)
+    return G_filtered
+
+class CSPPathFinder:
+    def __init__(self, graph):
+        self.graph = graph
+
+    def solve(self, start_coords, end_coords):
+        try:
+            orig_node = ox.distance.nearest_nodes(self.graph, start_coords[1], start_coords[0])
+            dest_node = ox.distance.nearest_nodes(self.graph, end_coords[1], end_coords[0])
+            route = nx.shortest_path(self.graph, orig_node, dest_node, weight='length')
+            return [[self.graph.nodes[node]['y'], self.graph.nodes[node]['x']] for node in route]
+        except Exception as e:
+            st.warning(f"Constraint Violation or Routing Failed: {e}")
+            return None
+        
+@st.cache_resource
+def load_karachi_graph():
+    graph_path = "karachi_graph.graphml"
+
+    if os.path.exists(graph_path):
+        G = ox.load_graphml(graph_path)
+    else:
+        with st.spinner("Downloading Karachi map (only once)..."):
+            G = ox.graph_from_place('Karachi, Pakistan', network_type='drive')
+            ox.save_graphml(G, graph_path)
+            st.success("Map saved to disk!")
+
+    return G
+
+G = load_karachi_graph()
+G = filter_graph(G)  # Apply CSP filtering
+csp_router = CSPPathFinder(G)  # Create CSP-based solver
+
+
+def get_actual_route(start_coords, end_coords):
+    """Get actual road route using CSP-constrained OSMnx graph"""
+    return csp_router.solve(start_coords, end_coords)
+
+
+def plot_folium_map(path=None):
+    lats = [coords[0] for coords in market_coords.values()]
+    lons = [coords[1] for coords in market_coords.values()]
+    center_lat = sum(lats) / len(lats)
+    center_lon = sum(lons) / len(lons)
     
-    def is_overlapping(new_x, new_y, label_positions, threshold=0.002):
-        for pos in label_positions.values():
-            if abs(pos[0] - new_y) < threshold and abs(pos[1] - new_x) < threshold:
-                return True
-        return False
+    m = folium.Map(
+        location=[center_lat, center_lon],
+        zoom_start=13,
+        tiles='OpenStreetMap',
+        control_scale=True,
+        width='100%',
+        height='70vh'
+    )
 
     for market, coords in market_coords.items():
-        ax.scatter(coords[1], coords[0], color='#2c3e50', s=500, edgecolors='white', zorder=3)
-        offset_x, offset_y = 0.0015, 0.0015  # Base offset
-
-        while is_overlapping(coords[1] + offset_x, coords[0] + offset_y, label_positions):
-            offset_x = random.uniform(0.001, 0.003) * random.choice([1, -1])
-            offset_y = random.uniform(0.001, 0.003) * random.choice([1, -1])
-
-        label_positions[market] = [coords[1] + offset_x, coords[0] + offset_y]
-
-        ax.text(coords[1] + offset_x, coords[0] + offset_y, market, fontsize=9, ha='left', va='bottom')
+        folium.Marker(
+            location=coords,
+            popup=market,
+            icon=folium.Icon(color='red', icon='shopping-cart', prefix='fa')
+        ).add_to(m)
 
     if path:
+        all_route_coords = []
+
         for i in range(len(path) - 1):
-            start_market = path[i]
-            end_market = path[i + 1]
-            start_coords = market_coords[start_market]
-            end_coords = market_coords[end_market]
-            ax.plot([start_coords[1], end_coords[1]], [start_coords[0], end_coords[0]], color='green', linewidth=2)
+            start = path[i]
+            end = path[i + 1]
+            start_coords = market_coords[start]
+            end_coords = market_coords[end]
 
-    ax.set_xlabel('Longitude')
-    ax.set_ylabel('Latitude')
-    ax.set_title('Market Path Map')
+            route_coords = get_actual_route(start_coords, end_coords)
 
-    st.pyplot(fig)
+            if route_coords:
+                all_route_coords.extend(route_coords)
+            else:
+                all_route_coords.extend([start_coords, end_coords])
 
-# Streamlit UI setup
-st.title("Pathfinding App with Map Visualization")
+        folium.PolyLine(
+            all_route_coords,
+            color='#3498db',
+            weight=6,
+            opacity=0.8,
+            tooltip="Optimal Path",
+            line_cap='round'
+        ).add_to(m)
 
-# User input for start and goal markets
-start_market = st.selectbox("Select the start market", list(market_coords.keys()))
-goal_market = st.selectbox("Select the destination market", list(market_coords.keys()))
+        folium.Marker(
+            location=market_coords[path[0]],
+            icon=folium.Icon(color='green', icon='play', prefix='fa'),
+            tooltip=f"Start: {path[0]}"
+        ).add_to(m)
 
-# Button to calculate the path
-if st.button("Find Path"):
+        folium.Marker(
+            location=market_coords[path[-1]],
+            icon=folium.Icon(color='black', icon='flag-checkered', prefix='fa'),
+            tooltip=f"Destination: {path[-1]}"
+        ).add_to(m)
+
+        for i, market in enumerate(path[1:-1], 1):
+            folium.Marker(
+                location=market_coords[market],
+                icon=folium.Icon(color='orange', icon='dot-circle', prefix='fa'),
+                tooltip=f"Waypoint {i}: {market}"
+            ).add_to(m)
+
+    # Add layer control and fullscreen option
+    folium.LayerControl().add_to(m)
+    folium.plugins.Fullscreen().add_to(m)
+    folium.plugins.MousePosition().add_to(m)
+
+    return m
+
+st.title("🚗 Karachi Market Path Finder")
+
+col1, col2 = st.columns(2)
+with col1:
+    start_market = st.selectbox("Select starting market", list(market_coords.keys()))
+with col2:
+    goal_market = st.selectbox("Select destination market", list(market_coords.keys()))
+
+if "path" in st.session_state:
+    path = st.session_state["path"]
+
+    st.markdown(f"""
+    <div class="result-container">
+        <h3>Optimal Path from <span class="path-highlight">{start_market}</span> to <span class="path-highlight">{goal_market}</span></h3>
+        <p>Total stops: {len(path)}</p>
+        <ol>
+            {"".join(f"<li>{market}</li>" for market in path)}
+        </ol>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.subheader("Route Map")
+    st_folium(plot_folium_map(path), width=700, height=500)
+
+if st.button("Find Optimal Path", use_container_width=True):
     if start_market == goal_market:
-        st.write("Start and goal markets are the same. Please select different markets.")
+        st.warning("Please select different start and destination markets")
     else:
-        path = a_star(start_market, goal_market)
-        if path:
-            # Display result
-            st.markdown(f"""
-                    <div class="result-container">
-                        <p>🚩 <strong>Path from</strong> <span class="path-highlight">{start_market}</span> 
-                        <strong>to</strong> <span class="path-highlight">{goal_market}</span>:</p>
-                        <p style="margin-top:0.5rem;">🧭 {" → ".join(path)}</p>
-                    </div>
-                """, unsafe_allow_html=True)
+        with st.spinner("Finding best path..."):
+            path = a_star(start_market, goal_market)
+            if path:
+                st.session_state["path"] = path
+            else:
+                st.error("No path found between the selected markets")
 
-            plot_map(path)  # Display map with the path
-        else:
-            st.write(f"No path found between {start_market} and {goal_market}.")
+if 'path' not in locals():
+    st.subheader("Karachi Markets Map")
+    st_folium(plot_folium_map(), width=700, height=500)
 ```
