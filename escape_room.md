@@ -5,6 +5,7 @@ import streamlit as st
 
 # Set wide layout
 # st.set_page_config(layout="wide")
+
 def main():
     # Grid size
     SIZE = 8
@@ -68,8 +69,8 @@ def main():
 
         def solve_lock_combination_puzzle(self, position):
             x, y = position
-            print(f"🔒 Solving Lock Combination Puzzle at ({x}, {y})!")
-            digits = [0, 1, 2, 3, 4, 5,  6, 7, 8, 9]
+            print(f"Solving Lock Combination Puzzle at ({x}, {y})")
+            digits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
             solution = {}
 
             def is_valid(digit1, digit2, digit3):
@@ -81,11 +82,11 @@ def main():
                         if is_valid(digit1, digit2, digit3):
                             solution = {"Digit 1": digit1, "Digit 2": digit2, "Digit 3": digit3}
                             self.puzzles_solved.append((position, solution))
-                            print(f"✅ Puzzle at ({x}, {y}) solved!")
-                            return True  
+                            print(f"Puzzle at ({x}, {y}) solved")
+                            return True
 
-            print(f"❌ Could not solve the puzzle at ({x}, {y}).")
-            return False 
+            print(f"Could not solve the puzzle at ({x}, {y})")
+            return False
 
         def astar(self, start, goal):
             pq = PriorityQueue()
@@ -130,58 +131,58 @@ def main():
             return None  # No path found
 
     def draw_grid(grid, path):
-        # st.write("### 🗺️ Escape Room Map")
+        # st.write("Map")
         color_map = {
-            START: '🟢',
-            GOAL: '🔴',
-            WALL: '⬛',
-            PUZZLE: '🟨',
-            OPEN: '⬜'
+            START: 'S',
+            GOAL: 'G',
+            WALL: '##',
+            PUZZLE: 'PZ',
+            OPEN: '..'
         }
 
-        # Create a grid display with larger blocks
         grid_display = []
         for i in range(SIZE):
             row_display = []
             for j in range(SIZE):
                 cell = grid[i][j]
                 if (i, j) in path and cell not in (START, GOAL):
-                    row_display.append('🔷')
+                    row_display.append('>>')
                 else:
-                    row_display.append(color_map.get(cell, '⬜⬜⬜'))  # Larger normal block
+                    row_display.append(color_map.get(cell, '..'))
             grid_display.append(row_display)
 
-        # Display the grid as a table for better spacing
         st.table(grid_display)
 
-    # def main():
-    st.title("🧠 A* Escape Room with Puzzle Integration")
+    st.title("A* Escape Room with Puzzle Integration")
 
     st.sidebar.header("Settings")
     wall_percent = st.sidebar.slider("Wall Percentage", 0.0, 1.0, WALL_PERCENT)
     puzzle_percent = st.sidebar.slider("Puzzle Percentage", 0.0, 1.0, PUZZLE_PERCENT)
 
-    if st.sidebar.button("🔁 Generate New Room and Start A*"):
+    if st.sidebar.button("Generate New Room and Start A*"):
         grid, start, goal = generateGrid(wall_percent, puzzle_percent)
         env = Environment(grid)
         path = env.astar(start, goal)
 
         draw_grid(grid, path if path else [])
 
-        st.write("### Path Result")
+        st.write("Path Result")
         if path:
-            st.success(f"✅ Path found: {path}")
+            st.success(f"Path found: {path}")
         else:
-            st.error("❌ Goal not reachable!")
-            
+            st.error("Goal not reachable!")
+
         if env.puzzles_solved:
-            with st.expander("📜 Solved CSP Puzzle Outputs"):
+            with st.expander("Solved CSP Puzzle Outputs"):
                 for position, solution in env.puzzles_solved:
-                    st.markdown(f"Puzzle at {position}: Combination - {solution['Digit 1']} {solution['Digit 2']} {solution['Digit 3']}")
+                    st.markdown(
+                        f"Puzzle at {position}: Combination - {solution['Digit 1']} {solution['Digit 2']} {solution['Digit 3']}"
+                    )
         else:
-            with st.expander("📜 Solved CSP Puzzle Outputs"):
+            with st.expander("Solved CSP Puzzle Outputs"):
                 st.write("No puzzles encountered or solved.")
-                
+
 if __name__ == "__main__":
     main()
+
 ```
