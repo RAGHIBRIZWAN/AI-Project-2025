@@ -3,14 +3,48 @@ import random
 from queue import PriorityQueue
 import streamlit as st
 
-# Set wide layout
-# st.set_page_config(layout="wide")
+# Inject custom CSS
+css = """
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
+
+    .stApp {
+        background-color: #f9fbfc;
+        font-family: 'Roboto', sans-serif;
+    }
+    h1, h2, h3, .stSidebar h1 {
+        color: #2c3e50;
+        font-family: 'Roboto', sans-serif;
+    }
+    .stTable {
+        font-size: 16px;
+    }
+    .css-1d391kg {  /* Expander */
+        background-color: #ecf0f1 !important;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+    .stButton>button {
+        background-color: #1abc9c;
+        color: white;
+        padding: 0.6rem 1.2rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: bold;
+        transition: background-color 0.3s ease;
+    }
+    .stButton>button:hover {
+        background-color: #16a085;
+    }
+    .stSlider > div > div {
+        color: #1abc9c;
+    }
+    </style>
+"""
+st.markdown(css, unsafe_allow_html=True)
 
 def main():
-    # Grid size
     SIZE = 8
-
-    # Cell types
     WALL = '#'
     OPEN = '.'
     START = 'S'
@@ -51,8 +85,8 @@ def main():
             self.maze = maze
             self.rows = len(maze)
             self.cols = len(maze[0])
-            self.directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]  # Right, Down, Left, Up
-            self.puzzles_solved = []  # To track solved puzzles
+            self.directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+            self.puzzles_solved = []
 
         def is_valid(self, x, y, puzzles_solved):
             if not (0 <= x < self.rows and 0 <= y < self.cols):
@@ -69,28 +103,24 @@ def main():
 
         def solve_lock_combination_puzzle(self, position):
             x, y = position
-            print(f"Solving Lock Combination Puzzle at ({x}, {y})")
-            digits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            digits = list(range(10))
             solution = {}
 
-            def is_valid(digit1, digit2, digit3):
-                return digit1 + digit2 == 9 and digit2 == 3 and digit1 > digit3
+            def is_valid(d1, d2, d3):
+                return d1 + d2 == 9 and d2 == 3 and d1 > d3
 
-            for digit1 in digits:
-                for digit2 in digits:
-                    for digit3 in digits:
-                        if is_valid(digit1, digit2, digit3):
-                            solution = {"Digit 1": digit1, "Digit 2": digit2, "Digit 3": digit3}
+            for d1 in digits:
+                for d2 in digits:
+                    for d3 in digits:
+                        if is_valid(d1, d2, d3):
+                            solution = {"Digit 1": d1, "Digit 2": d2, "Digit 3": d3}
                             self.puzzles_solved.append((position, solution))
-                            print(f"Puzzle at ({x}, {y}) solved")
                             return True
-
-            print(f"Could not solve the puzzle at ({x}, {y})")
             return False
 
         def astar(self, start, goal):
             pq = PriorityQueue()
-            pq.put((0, [start]))  # (f_cost, path)
+            pq.put((0, [start]))
             visited = set()
             puzzles_solved = set()
 
@@ -99,7 +129,7 @@ def main():
                 current = path[-1]
 
                 if current == goal:
-                    return path  # Found the goal!
+                    return path
 
                 if current in visited:
                     continue
@@ -107,19 +137,14 @@ def main():
 
                 for dx, dy in self.directions:
                     nx, ny = current[0] + dx, current[1] + dy
-
-                    if not (0 <= nx < self.rows and 0 <= ny < self.cols):
-                        continue
-
-                    if (nx, ny) in visited:
+                    if not (0 <= nx < self.rows and 0 <= ny < self.cols) or (nx, ny) in visited:
                         continue
 
                     cell = self.maze[nx][ny]
-
                     if cell == PUZZLE and (nx, ny) not in puzzles_solved:
                         if not self.solve_lock_combination_puzzle((nx, ny)):
-                            continue  # Could not solve, skip this direction
-                        puzzles_solved.add((nx, ny))  # Mark it solved
+                            continue
+                        puzzles_solved.add((nx, ny))
 
                     if self.is_valid(nx, ny, puzzles_solved):
                         new_path = path + [(nx, ny)]
@@ -128,10 +153,9 @@ def main():
                         f_cost = g_cost + h_cost
                         pq.put((f_cost, new_path))
 
-            return None  # No path found
+            return None
 
     def draw_grid(grid, path):
-        # st.write("Map")
         color_map = {
             START: 'S',
             GOAL: 'G',
@@ -151,9 +175,10 @@ def main():
                     row_display.append(color_map.get(cell, '..'))
             grid_display.append(row_display)
 
+        st.subheader("Maze View")
         st.table(grid_display)
 
-    st.title("A* Escape Room with Puzzle Integration")
+    st.title("A* Escape Room")
 
     st.sidebar.header("Settings")
     wall_percent = st.sidebar.slider("Wall Percentage", 0.0, 1.0, WALL_PERCENT)
@@ -166,20 +191,19 @@ def main():
 
         draw_grid(grid, path if path else [])
 
-        st.write("Path Result")
+        st.subheader("Path Result")
         if path:
             st.success(f"Path found: {path}")
         else:
             st.error("Goal not reachable!")
 
-        if env.puzzles_solved:
-            with st.expander("Solved CSP Puzzle Outputs"):
+        with st.expander("Solved CSP Puzzle Outputs"):
+            if env.puzzles_solved:
                 for position, solution in env.puzzles_solved:
                     st.markdown(
                         f"Puzzle at {position}: Combination - {solution['Digit 1']} {solution['Digit 2']} {solution['Digit 3']}"
                     )
-        else:
-            with st.expander("Solved CSP Puzzle Outputs"):
+            else:
                 st.write("No puzzles encountered or solved.")
 
 if __name__ == "__main__":
