@@ -265,7 +265,7 @@ def main():
 
         return m
 
-    st.title("🚗 Karachi Market Path Finder")
+    st.title("Karachi Market Path Finder")
 
     col1, col2 = st.columns(2)
     with col1:
