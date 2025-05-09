@@ -142,5 +142,168 @@ def main():
                         open_set.put((f_score[neighbor], neighbor))
 
         return None
+    def filter_graph(G):
+        """Filter out edges that violate constraints like access or unwanted road types"""
+        G_filtered = G.copy()
+        for u, v, k, data in G.edges(keys=True, data=True):
+            if 'access' in data and data['access'] in ['private', 'no']:
+                G_filtered.remove_edge(u, v, k)
+            elif 'highway' in data and data['highway'] in ['service', 'pedestrian', 'footway', 'steps', 'track']:
+                G_filtered.remove_edge(u, v, k)
+        return G_filtered
+
+# Implemented CSP to restrict algorithm to show path over buildings etc.
+    class CSPPathFinder:
+        def __init__(self, graph):
+            self.graph = graph
+
+        def solve(self, start_coords, end_coords):
+            try:
+                orig_node = ox.distance.nearest_nodes(self.graph, start_coords[1], start_coords[0])
+                dest_node = ox.distance.nearest_nodes(self.graph, end_coords[1], end_coords[0])
+                route = nx.shortest_path(self.graph, orig_node, dest_node, weight='length')
+                return [[self.graph.nodes[node]['y'], self.graph.nodes[node]['x']] for node in route]
+            except Exception as e:
+                st.warning(f"Constraint Violation or Routing Failed: {e}")
+                return None
+            
+    @st.cache_resource
+    def load_karachi_graph():
+        graph_path = "karachi_graph.graphml"
+
+        if os.path.exists(graph_path):
+            G = ox.load_graphml(graph_path)
+        else:
+            with st.spinner("Downloading Karachi map (only once)..."):
+                G = ox.graph_from_place('Karachi, Pakistan', network_type='drive')
+                ox.save_graphml(G, graph_path)
+                st.success("Map saved to disk!")
+
+        return G
+
+    G = load_karachi_graph()
+    G = filter_graph(G)  # Apply CSP filtering
+    csp_router = CSPPathFinder(G)  # Create CSP based solver
+
+
+    def get_actual_route(start_coords, end_coords):
+        """Get actual road route using CSP constrained OSMnx graph"""
+        return csp_router.solve(start_coords, end_coords)
+
+
+    def plot_folium_map(path=None):
+        lats = [coords[0] for coords in market_coords.values()]
+        lons = [coords[1] for coords in market_coords.values()]
+        center_lat = sum(lats) / len(lats)
+        center_lon = sum(lons) / len(lons)
+        
+        m = folium.Map(
+            location=[center_lat, center_lon],
+            zoom_start=13,
+            tiles='OpenStreetMap',
+            control_scale=True,
+            width='100%',
+            height='70vh'
+        )
+
+        for market, coords in market_coords.items():
+            folium.Marker(
+                location=coords,
+                popup=market,
+                icon=folium.Icon(color='red', icon='shopping-cart', prefix='fa')
+            ).add_to(m)
+
+        if path:
+            all_route_coords = []
+
+            for i in range(len(path) - 1):
+                start = path[i]
+                end = path[i + 1]
+                start_coords = market_coords[start]
+                end_coords = market_coords[end]
+
+                route_coords = get_actual_route(start_coords, end_coords)
+
+                if route_coords:
+                    all_route_coords.extend(route_coords)
+                else:
+                    all_route_coords.extend([start_coords, end_coords])
+
+            folium.PolyLine(
+                all_route_coords,
+                color='#3498db',
+                weight=6,
+                opacity=0.8,
+                tooltip="Optimal Path",
+                line_cap='round'
+            ).add_to(m)
+
+            folium.Marker(
+                location=market_coords[path[0]],
+                icon=folium.Icon(color='green', icon='play', prefix='fa'),
+                tooltip=f"Start: {path[0]}"
+            ).add_to(m)
+
+            folium.Marker(
+                location=market_coords[path[-1]],
+                icon=folium.Icon(color='black', icon='flag-checkered', prefix='fa'),
+                tooltip=f"Destination: {path[-1]}"
+            ).add_to(m)
+
+            for i, market in enumerate(path[1:-1], 1):
+                folium.Marker(
+                    location=market_coords[market],
+                    icon=folium.Icon(color='orange', icon='dot-circle', prefix='fa'),
+                    tooltip=f"Waypoint {i}: {market}"
+                ).add_to(m)
+
+        # Add layer control and fullscreen option
+        folium.LayerControl().add_to(m)
+        folium.plugins.Fullscreen().add_to(m)
+        folium.plugins.MousePosition().add_to(m)
+
+        return m
+
+    st.title("Karachi Market Path Finder")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        start_market = st.selectbox("Select starting market", list(market_coords.keys()))
+    with col2:
+        goal_market = st.selectbox("Select destination market", list(market_coords.keys()))
+        
+    if st.button("Find Optimal Path", use_container_width=True):
+        if start_market == goal_market:
+            st.warning("Please select different start and destination markets")
+        else:
+            with st.spinner("Finding best path..."):
+                path = a_star(start_market, goal_market)
+                if path:
+                    st.session_state["path"] = path
+                else:
+                    st.error("No path found between the selected markets")
+
+    if "path" in st.session_state:
+        path = st.session_state["path"]
+
+        st.markdown(f"""
+        <div class="result-container">
+            <h3>Optimal Path from <span class="path-highlight">{start_market}</span> to <span class="path-highlight">{goal_market}</span></h3>
+            <p>Total stops: {len(path)}</p>
+            <ol>
+                {"".join(f"<li>{market}</li>" for market in path)}
+            </ol>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.subheader("Route Map")
+        st_folium(plot_folium_map(path), width=700, height=500)
+
+    if 'path' not in locals():
+        st.subheader("Karachi Markets Map")
+        st_folium(plot_folium_map(), width=700, height=500)
+        
+if __name__ == "__main__":
+    main()
       
 ```
