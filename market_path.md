@@ -103,13 +103,12 @@ def main():
         node_lat, node_lon = market_coords[node]
         goal_lat, goal_lon = market_coords[goal]
 
-        lat_diff = abs(goal_lat - node_lat) * 111.32  
+        lat_diff = abs(goal_lat - node_lat) * 111.32  #111.32 km is the approximate distance of 1 degree of latitude
         lon_diff = abs(goal_lon - node_lon) * 111.32 * abs(math.cos(math.radians((node_lat + goal_lat) / 2)))
 
         traffic_factor = random.uniform(1.0, 1.3)
 
         return (lat_diff + lon_diff) * traffic_factor
-
 
     def a_star(start, goal):
         open_set = PriorityQueue()
@@ -154,6 +153,7 @@ def main():
                 G_filtered.remove_edge(u, v, k)
         return G_filtered
 
+# Implemented CSP to restrict algorithm to show path over buildings etc.
     class CSPPathFinder:
         def __init__(self, graph):
             self.graph = graph
@@ -184,11 +184,11 @@ def main():
 
     G = load_karachi_graph()
     G = filter_graph(G)  # Apply CSP filtering
-    csp_router = CSPPathFinder(G)  # Create CSP-based solver
+    csp_router = CSPPathFinder(G)  # Create CSP based solver
 
 
     def get_actual_route(start_coords, end_coords):
-        """Get actual road route using CSP-constrained OSMnx graph"""
+        """Get actual road route using CSP constrained OSMnx graph"""
         return csp_router.solve(start_coords, end_coords)
 
 
